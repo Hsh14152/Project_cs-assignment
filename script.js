@@ -92,13 +92,11 @@ function handleFileSelect(e) {
 }
 
 function handleFile(file) {
-  // 파일 형식 검증
   if (!file.type.startsWith('image/')) {
     alert('이미지 파일만 업로드 가능합니다.');
     return;
   }
 
-  // 파일 크기 검증 (10MB)
   if (file.size > 10 * 1024 * 1024) {
     alert('파일 크기는 10MB를 초과할 수 없습니다.');
     return;
@@ -106,7 +104,6 @@ function handleFile(file) {
 
   uploadedFile = file;
 
-  // 미리보기 표시
   const reader = new FileReader();
   reader.onload = (e) => {
     document.getElementById('previewImage').src = e.target.result;
@@ -123,7 +120,7 @@ function removeImage() {
   document.getElementById('previewSection').style.display = 'none';
 }
 
-function analyzeImage() {
+async function analyzeImage() {
   if (!uploadedFile) {
     alert('이미지를 먼저 업로드해주세요.');
     return;
@@ -135,34 +132,97 @@ function analyzeImage() {
   document.getElementById('results').style.display = 'none';
   document.getElementById('errorSection').style.display = 'none';
 
-  // 실제로는 여기서 AI API 호출
-  // 현재는 시뮬레이션으로 데모 데이터 생성
-  setTimeout(() => {
-    simulateAIAnalysis();
-  }, 2000);
+  // 버튼 비활성화
+  document.getElementById('analyzeBtn').disabled = true;
+
+  try {
+    // Tesseract.js OCR 실행
+    const result = await Tesseract.recognize(
+      uploadedFile,
+      'eng+kor', // 영어 + 한글 인식
+      {
+        logger: (m) => {
+          if (m.status === 'recognizing text') {
+            const progress = Math.round(m.progress * 100);
+            updateProgress(progress, '텍스트 인식 중...');
+          }
+        },
+      },
+    );
+
+    updateProgress(100, '분석 완료!');
+
+    // OCR 결과에서 프로세스 정보 추출
+    const processes = parseOCRText(result.data.text);
+
+    if (processes.length === 0) {
+      showError(
+        '프로세스 정보를 찾을 수 없습니다. 더 선명한 이미지로 다시 시도해주세요.',
+      );
+      return;
+    }
+
+    analysisResults = processes;
+    displayResults(analysisResults);
+  } catch (error) {
+    console.error('OCR 에러:', error);
+    showError('이미지 분석 중 오류가 발생했습니다. 다시 시도해주세요.');
+  } finally {
+    document.getElementById('analyzeBtn').disabled = false;
+  }
 }
 
-function simulateAIAnalysis() {
-  // 데모 데이터 생성 (실제로는 AI API 응답 사용)
-  const demoProcesses = [
-    { name: 'Google Chrome', memory: 1184.1, category: 'safe' },
-    { name: 'Microsoft Edge', memory: 336.3, category: 'safe' },
-    { name: 'explorer.exe', memory: 111.5, category: 'critical' },
-    { name: 'System', memory: 159.6, category: 'critical' },
-    { name: 'dwm.exe', memory: 89.2, category: 'critical' },
-    { name: 'Discord.exe', memory: 234.7, category: 'safe' },
-    { name: 'RuntimeBroker.exe', memory: 45.3, category: 'caution' },
-    { name: 'SearchIndexer.exe', memory: 67.8, category: 'caution' },
-    { name: 'Code.exe', memory: 512.4, category: 'safe' },
-    { name: 'svchost.exe', memory: 123.9, category: 'critical' },
+function updateProgress(percentage, message) {
+  document.getElementById('progressBar').style.width = percentage + '%';
+  document.getElementById('progressText').textContent = percentage + '%';
+  document.getElementById('loadingSubtext').textContent = message;
+}
+
+function parseOCRText(text) {
+  const lines = text.split('\n').filter((line) => line.trim());
+  const processes = [];
+
+  console.log('OCR 원본 텍스트:', text);
+
+  // 다양한 패턴 매칭
+  const patterns = [
+    // 프로세스명.exe 1,234 MB
+    /([a-zA-Z0-9가-힣._-]+\.exe)\s+([\d,]+)\s*(MB|KB|GB|M|K|G)/gi,
+    // 프로세스명 1,234 MB
+    /([a-zA-Z0-9가-힣._-]+)\s+([\d,]+)\s*(MB|KB|GB|M|K|G)/gi,
+    // 프로세스명: 1234MB
+    /([a-zA-Z0-9가-힣._-]+)[:\s]+([\d,]+)\s*(MB|KB|GB|M|K|G)/gi,
   ];
 
-  analysisResults = demoProcesses.map((p) => ({
-    ...p,
-    description: getProcessDescription(p.name, p.category),
-  }));
+  for (const pattern of patterns) {
+    let match;
+    while ((match = pattern.exec(text)) !== null) {
+      const name = match[1].trim();
+      let memory = parseFloat(match[2].replace(/,/g, ''));
+      const unit = match[3].toUpperCase();
 
-  displayResults(analysisResults);
+      // 단위 변환 (MB 기준)
+      if (unit.startsWith('K')) {
+        memory = memory / 1024;
+      } else if (unit.startsWith('G')) {
+        memory = memory * 1024;
+      }
+
+      // 중복 제거
+      if (!processes.find((p) => p.name === name) && memory > 0) {
+        const category = categorizeProcess(name);
+        processes.push({
+          name: name,
+          memory: memory,
+          category: category,
+          description: getProcessDescription(name, category),
+        });
+      }
+    }
+  }
+
+  console.log('파싱된 프로세스:', processes);
+  return processes;
 }
 
 function categorizeProcess(name) {
@@ -329,22 +389,28 @@ function generateCategoryHTML(category, processes, title) {
     `;
 }
 
+function showError(message) {
+  document.getElementById('errorMessage').textContent = message;
+  document.getElementById('loadingSection').style.display = 'none';
+  document.getElementById('errorSection').style.display = 'block';
+}
+
 function exportReport() {
   if (!analysisResults) return;
 
   const safeProcesses = analysisResults.filter((p) => p.category === 'safe');
   const safeMemory = safeProcesses.reduce((sum, p) => sum + p.memory, 0);
 
-  let report = '프로세스 분석 보고서';
-  report += '='.repeat(50) + '';
-  report += `총 프로세스 수: ${analysisResults.length}개`;
-  report += `안전하게 종료 가능: ${safeProcesses.length}개`;
-  report += `확보 가능한 메모리: ${safeMemory.toFixed(1)} MB`;
+  let report = '프로세스 분석 보고서\n';
+  report += '='.repeat(50) + '\n\n';
+  report += `총 프로세스 수: ${analysisResults.length}개\n`;
+  report += `안전하게 종료 가능: ${safeProcesses.length}개\n`;
+  report += `확보 가능한 메모리: ${safeMemory.toFixed(1)} MB\n\n`;
 
-  report += '안전하게 종료 가능한 프로세스:';
-  report += '-'.repeat(50) + '';
+  report += '안전하게 종료 가능한 프로세스:\n';
+  report += '-'.repeat(50) + '\n';
   safeProcesses.forEach((p) => {
-    report += `${p.name} - ${p.memory.toFixed(1)} MB`;
+    report += `${p.name} - ${p.memory.toFixed(1)} MB\n`;
   });
 
   const blob = new Blob([report], { type: 'text/plain' });

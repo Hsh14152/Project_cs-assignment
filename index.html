@@ -1,98 +1,140 @@
-<!DOCTYPE html>
+<!doctype html>
 <html lang="ko">
-<head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <title>프로세스 분석기 - AI 기반 메모리 최적화</title>
-    <link rel="stylesheet" href="style.css">
-</head>
-<body>
+    <link rel="stylesheet" href="style.css" />
+    <script src="https://cdn.jsdelivr.net/npm/tesseract.js@5/dist/tesseract.min.js"></script>
+  </head>
+  <body>
     <div class="container">
-        <div class="header">
-            <h1>🚀 프로세스 분석기</h1>
-            <p>작업관리자 스크린샷을 AI로 분석하여 안전한 메모리 최적화를 도와드립니다</p>
+      <div class="header">
+        <h1>🚀 프로세스 분석기</h1>
+        <p>
+          작업관리자 스크린샷을 AI로 분석하여 안전한 메모리 최적화를
+          도와드립니다
+        </p>
+      </div>
+
+      <div class="content">
+        <!-- 업로드 섹션 -->
+        <div class="upload-section">
+          <h2>📸 작업관리자 스크린샷 업로드</h2>
+
+          <div class="upload-area" id="uploadArea">
+            <div class="upload-icon">📁</div>
+            <p class="upload-text">이미지를 드래그하거나 클릭하여 업로드</p>
+            <p class="upload-subtext">PNG, JPG, JPEG 형식 지원 (최대 10MB)</p>
+            <input type="file" id="fileInput" accept="image/*" hidden />
+            <button
+              class="btn-upload"
+              onclick="document.getElementById('fileInput').click()"
+            >
+              파일 선택
+            </button>
+          </div>
+
+          <div
+            class="preview-section"
+            id="previewSection"
+            style="display: none"
+          >
+            <div class="preview-header">
+              <h3>📋 업로드된 이미지</h3>
+              <button class="btn-remove" onclick="removeImage()">✕ 제거</button>
+            </div>
+            <img id="previewImage" alt="Preview" />
+            <div class="button-group">
+              <button
+                class="btn-analyze"
+                id="analyzeBtn"
+                onclick="analyzeImage()"
+              >
+                🔍 AI 분석 시작
+              </button>
+            </div>
+          </div>
+
+          <div class="info-box">
+            <strong>💡 사용 방법:</strong>
+            <ol>
+              <li>작업관리자 실행 (Ctrl + Shift + Esc)</li>
+              <li>세부 정보 탭 또는 프로세스 탭 선택</li>
+              <li>화면 캡처 (Win + Shift + S 또는 스크린샷 도구)</li>
+              <li>캡처한 이미지를 이 페이지에 업로드</li>
+            </ol>
+            <div
+              style="
+                margin-top: 15px;
+                padding-top: 15px;
+                border-top: 1px solid #90caf9;
+              "
+            >
+              <strong>📸 촬영 팁:</strong>
+              <ul style="margin-left: 20px; margin-top: 8px; line-height: 1.8">
+                <li>프로세스명과 메모리 사용량이 명확히 보이도록 촬영</li>
+                <li>가능한 고해상도로 캡처</li>
+                <li>글자가 흐릿하지 않도록 주의</li>
+              </ul>
+            </div>
+          </div>
         </div>
 
-        <div class="content">
-            <!-- 업로드 섹션 -->
-            <div class="upload-section">
-                <h2>📸 작업관리자 스크린샷 업로드</h2>
-
-                <div class="upload-area" id="uploadArea">
-                    <div class="upload-icon">📁</div>
-                    <p class="upload-text">이미지를 드래그하거나 클릭하여 업로드</p>
-                    <p class="upload-subtext">PNG, JPG, JPEG 형식 지원 (최대 10MB)</p>
-                    <input type="file" id="fileInput" accept="image/*" hidden>
-                    <button class="btn-upload" onclick="document.getElementById('fileInput').click()">
-                        파일 선택
-                    </button>
-                </div>
-
-                <div class="preview-section" id="previewSection" style="display: none;">
-                    <div class="preview-header">
-                        <h3>📋 업로드된 이미지</h3>
-                        <button class="btn-remove" onclick="removeImage()">✕ 제거</button>
-                    </div>
-                    <img id="previewImage" alt="Preview">
-                    <div class="button-group">
-                        <button class="btn-analyze" onclick="analyzeImage()">
-                            🔍 AI 분석 시작
-                        </button>
-                    </div>
-                </div>
-
-                <div class="info-box">
-                    <strong>💡 사용 방법:</strong>
-                    <ol>
-                        <li>작업관리자 실행 (Ctrl + Shift + Esc)</li>
-                        <li>세부 정보 탭 또는 프로세스 탭 선택</li>
-                        <li>화면 캡처 (Win + Shift + S 또는 스크린샷 도구)</li>
-                        <li>캡처한 이미지를 이 페이지에 업로드</li>
-                    </ol>
-                </div>
-            </div>
-
-            <!-- 로딩 섹션 -->
-            <div class="loading-section" id="loadingSection" style="display: none;">
-                <div class="spinner"></div>
-                <p>AI가 이미지를 분석하고 있습니다...</p>
-                <p class="loading-subtext">프로세스 정보를 추출하고 안전성을 평가하는 중입니다</p>
-            </div>
-
-            <!-- 결과 섹션 -->
-            <div class="results-section" id="results" style="display: none;">
-                <h2>📊 분석 결과</h2>
-
-                <div class="stats" id="stats"></div>
-
-                <div class="process-list" id="processList"></div>
-
-                <div class="action-buttons">
-                    <button class="btn-secondary" onclick="exportReport()">
-                        📄 보고서 다운로드
-                    </button>
-                    <button class="btn-secondary" onclick="resetAnalysis()">
-                        🔄 새로 분석하기
-                    </button>
-                </div>
-            </div>
-
-            <!-- 에러 메시지 -->
-            <div class="error-section" id="errorSection" style="display: none;">
-                <div class="error-box">
-                    <h3>⚠️ 분석 실패</h3>
-                    <p id="errorMessage"></p>
-                    <button class="btn-secondary" onclick="resetAnalysis()">다시 시도</button>
-                </div>
-            </div>
+        <!-- 로딩 섹션 -->
+        <div class="loading-section" id="loadingSection" style="display: none">
+          <div class="spinner"></div>
+          <p id="loadingText">AI가 이미지를 분석하고 있습니다...</p>
+          <p class="loading-subtext" id="loadingSubtext">
+            텍스트를 인식하는 중입니다
+          </p>
+          <div class="progress-container">
+            <div class="progress-bar" id="progressBar"></div>
+          </div>
+          <p class="progress-text" id="progressText">0%</p>
         </div>
 
-        <footer class="footer">
-            <p>⚠️ 중요: 시스템 프로세스는 절대 종료하지 마세요. 컴퓨터가 불안정해질 수 있습니다.</p>
-            <p class="footer-subtext">본 서비스는 참고용이며, 프로세스 종료는 신중히 결정하시기 바랍니다.</p>
-        </footer>
+        <!-- 결과 섹션 -->
+        <div class="results-section" id="results" style="display: none">
+          <h2>📊 분석 결과</h2>
+
+          <div class="stats" id="stats"></div>
+
+          <div class="process-list" id="processList"></div>
+
+          <div class="action-buttons">
+            <button class="btn-secondary" onclick="exportReport()">
+              📄 보고서 다운로드
+            </button>
+            <button class="btn-secondary" onclick="resetAnalysis()">
+              🔄 새로 분석하기
+            </button>
+          </div>
+        </div>
+
+        <!-- 에러 메시지 -->
+        <div class="error-section" id="errorSection" style="display: none">
+          <div class="error-box">
+            <h3>⚠️ 분석 실패</h3>
+            <p id="errorMessage"></p>
+            <button class="btn-secondary" onclick="resetAnalysis()">
+              다시 시도
+            </button>
+          </div>
+        </div>
+      </div>
+
+      <footer class="footer">
+        <p>
+          ⚠️ 중요: 시스템 프로세스는 절대 종료하지 마세요. 컴퓨터가 불안정해질
+          수 있습니다.
+        </p>
+        <p class="footer-subtext">
+          본 서비스는 참고용이며, 프로세스 종료는 신중히 결정하시기 바랍니다.
+        </p>
+      </footer>
     </div>
 
     <script src="script.js"></script>
-</body>
+  </body>
 </html>
