@@ -15,6 +15,7 @@ const processDatabase = {
     'fontdrvhost.exe',
     'conhost.exe',
     'windows 탐색기',
+    '탐색기',
   ],
   safe: [
     'chrome.exe',
@@ -40,6 +41,9 @@ const processDatabase = {
     'microsoft edge',
     'visual studio code',
     '작업 관리자',
+    'chrome',
+    'edge',
+    'vscode',
   ],
   caution: [
     'antimalware',
@@ -53,6 +57,8 @@ const processDatabase = {
     'securityhealthservice.exe',
     'audiodg.exe',
     'activation licensing',
+    'ahnlab',
+    'anysign',
   ],
 };
 
@@ -193,37 +199,90 @@ function updateProgress(percentage, message) {
 
 function parseOCRText(text) {
   const processes = [];
-  const lines = text.split('\n');
 
-  console.log('총 라인 수:', lines.length);
+  // 전체 텍스트를 정제
+  const cleanText = text.replace(/\s+/g, ' ');
 
-  for (let i = 0; i < lines.length; i++) {
-    const line = lines[i].trim();
-    if (!line) continue;
+  console.log('정제된 텍스트:', cleanText);
 
-    // 패턴 1: 프로세스명 + 메모리 (MB 단위)
-    // 예: Google Chrome(18) 1,284.5MB
-    // 예: Microsoft Edge(10) 295.5MB
-    const pattern1 = /([a-zA-Z0-9가-힣\s._()-]+?)\s+([\d,]+\.?\d*)\s*MB/i;
-    const match1 = line.match(pattern1);
+  // 패턴 1: Google Chrome(18) © 0% 1,2845MB
+  // 프로세스명(숫자) 기호 퍼센트 메모리
+  const pattern1 =
+    /@?\s*([A-Za-z가-힣\s]+?)\s*\(\d+\)\s*[©®™]?\s*\d+%\s+([\d,]+)MB/gi;
 
-    if (match1) {
-      let name = match1[1].trim();
-      let memory = parseFloat(match1[2].replace(/,/g, ''));
+  let match;
+  while ((match = pattern1.exec(text)) !== null) {
+    let name = match[1].trim();
+    let memoryStr = match[2].replace(/,/g, '');
 
-      // 괄호 안 숫자 제거 (프로세스 개수)
-      name = name.replace(/\(\d+\)$/, '').trim();
+    // 메모리 값 정규화: 1,2845 → 1284.5
+    let memory = parseFloat(memoryStr);
+    if (memory > 10000) {
+      memory = memory / 10; // 소수점 위치 수정
+    }
 
-      if (memory > 0 && name.length > 1) {
-        const category = categorizeProcess(name);
-        processes.push({
-          name: name,
-          memory: memory,
-          category: category,
-          description: getProcessDescription(name, category),
-        });
-        console.log('파싱 성공:', name, memory + 'MB');
-      }
+    if (memory > 0 && name.length > 1) {
+      const category = categorizeProcess(name);
+      processes.push({
+        name: name,
+        memory: memory,
+        category: category,
+        description: getProcessDescription(name, category),
+      });
+      console.log('파싱 성공 (패턴1):', name, memory + 'MB');
+    }
+  }
+
+  // 패턴 2: Tal Windows 탐색기 0% 179.5MB
+  // 기호 프로세스명 퍼센트 메모리
+  const pattern2 =
+    /[>@Tal\[\]]+\s*([A-Za-z가-힣\s]+?)\s+\d+(?:\.\d+)?%\s+([\d,.]+)MB/gi;
+
+  while ((match = pattern2.exec(text)) !== null) {
+    let name = match[1].trim();
+    let memoryStr = match[2].replace(/,/g, '');
+    let memory = parseFloat(memoryStr);
+
+    if (memory > 10000) {
+      memory = memory / 10;
+    }
+
+    if (memory > 0 && name.length > 1) {
+      const category = categorizeProcess(name);
+      processes.push({
+        name: name,
+        memory: memory,
+        category: category,
+        description: getProcessDescription(name, category),
+      });
+      console.log('파싱 성공 (패턴2):', name, memory + 'MB');
+    }
+  }
+
+  // 패턴 3: 단순 패턴 - 프로세스명 메모리MB
+  const pattern3 = /([A-Za-z가-힣\s]{3,}?)\s+([\d,]+(?:\.\d+)?)\s*MB/gi;
+
+  while ((match = pattern3.exec(text)) !== null) {
+    let name = match[1].trim();
+    let memoryStr = match[2].replace(/,/g, '');
+    let memory = parseFloat(memoryStr);
+
+    // 숫자만 있는 이름 제외
+    if (/^\d+$/.test(name)) continue;
+
+    if (memory > 10000) {
+      memory = memory / 10;
+    }
+
+    if (memory > 0 && memory < 50000 && name.length > 2) {
+      const category = categorizeProcess(name);
+      processes.push({
+        name: name,
+        memory: memory,
+        category: category,
+        description: getProcessDescription(name, category),
+      });
+      console.log('파싱 성공 (패턴3):', name, memory + 'MB');
     }
   }
 
@@ -232,10 +291,12 @@ function parseOCRText(text) {
   const seen = new Set();
 
   for (const proc of processes) {
-    const key = proc.name.toLowerCase();
+    const key = proc.name.toLowerCase().replace(/\s+/g, '');
     if (!seen.has(key)) {
       seen.add(key);
       uniqueProcesses.push(proc);
+    } else {
+      console.log('중복 제거:', proc.name);
     }
   }
 
@@ -298,6 +359,8 @@ function getProcessDescription(name, category) {
       lowerName.includes('studio')
     ) {
       return '개발 도구 / 편집기 - 안전하게 종료 가능';
+    } else if (lowerName.includes('관리자')) {
+      return '작업 관리자 - 안전하게 종료 가능';
     }
     return '일반 응용 프로그램 - 안전하게 종료 가능';
   } else {
@@ -307,6 +370,8 @@ function getProcessDescription(name, category) {
       return '그래픽 드라이버 - 게임/영상 작업 시 필요';
     } else if (lowerName.includes('antimalware')) {
       return 'Windows Defender - 바이러스 백신 서비스';
+    } else if (lowerName.includes('ahnlab')) {
+      return 'AhnLab 보안 프로그램 - 확인 후 종료';
     }
     return '시스템 서비스 - 용도 확인 후 종료';
   }
