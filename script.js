@@ -413,34 +413,6 @@ function showError(message) {
   document.getElementById('errorSection').style.display = 'block';
 }
 
-function exportReport() {
-  if (!analysisResults) return;
-
-  const safeProcesses = analysisResults.filter((p) => p.category === 'safe');
-  const safeMemory = safeProcesses.reduce((sum, p) => sum + (p.memory || 0), 0);
-
-  let report = '프로세스 분석 보고서\n';
-  report += '='.repeat(50) + '\n\n';
-  report += `총 프로세스 수: ${analysisResults.length}개\n`;
-  report += `안전하게 종료 가능: ${safeProcesses.length}개\n`;
-  report += `확보 가능한 메모리: ${safeMemory.toFixed(1)} MB\n\n`;
-
-  report += '안전하게 종료 가능한 프로세스:\n';
-  report += '-'.repeat(50) + '\n';
-  safeProcesses.forEach((p) => {
-    report += `${p.name} - ${(p.memory || 0).toFixed(1)} MB\n`;
-    report += `  ${p.description}\n\n`;
-  });
-
-  const blob = new Blob([report], { type: 'text/plain' });
-  const url = URL.createObjectURL(blob);
-  const a = document.createElement('a');
-  a.href = url;
-  a.download = 'process_analysis_report.txt';
-  a.click();
-  URL.revokeObjectURL(url);
-}
-
 function resetAnalysis() {
   analysisResults = null;
   removeImage();
