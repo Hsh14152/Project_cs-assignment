@@ -1,102 +1,90 @@
-// 프로세스 분류 데이터베이스
-const processDatabase = {
-  critical: [
-    'system',
-    'csrss.exe',
-    'wininit.exe',
-    'services.exe',
-    'lsass.exe',
-    'svchost.exe',
-    'dwm.exe',
-    'explorer.exe',
-    'winlogon.exe',
-    'smss.exe',
-    'registry',
-    'fontdrvhost.exe',
-    'conhost.exe',
-    'windows 탐색기',
-    '탐색기',
-  ],
-  safe: [
-    'chrome.exe',
-    'msedge.exe',
-    'firefox.exe',
-    'notepad.exe',
-    'calculator.exe',
-    'spotify.exe',
-    'discord.exe',
-    'slack.exe',
-    'teams.exe',
-    'zoom.exe',
-    'kakao',
-    'telegram',
-    'steam.exe',
-    'epic',
-    'origin.exe',
-    'code.exe',
-    'vlc.exe',
-    'notion.exe',
-    'obsidian.exe',
-    'google chrome',
-    'microsoft edge',
-    'visual studio code',
-    '작업 관리자',
-    'chrome',
-    'edge',
-    'vscode',
-  ],
-  caution: [
-    'antimalware',
-    'windows defender',
-    'nvidia',
-    'amd',
-    'intel',
-    'runtime broker',
-    'backgroundtaskhost.exe',
-    'searchindexer.exe',
-    'securityhealthservice.exe',
-    'audiodg.exe',
-    'activation licensing',
-    'ahnlab',
-    'anysign',
-  ],
-};
+// gemini-2.0-flash-lite: 무료 티어에서 사용 가능한 최신 모델
+const GEMINI_API_URL =
+  'https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent';
 
 let uploadedFile = null;
 let analysisResults = null;
+let geminiApiKey = null;
 
-// 파일 입력 이벤트
-document
-  .getElementById('fileInput')
-  .addEventListener('change', handleFileSelect);
-
-// 업로드 버튼 클릭 이벤트 (이벤트 버블링 방지)
-document.getElementById('uploadBtn').addEventListener('click', (e) => {
-  e.stopPropagation();
-  document.getElementById('fileInput').click();
+// 초기화
+document.addEventListener('DOMContentLoaded', () => {
+  loadApiKey();
+  document
+    .getElementById('fileInput')
+    .addEventListener('change', handleFileSelect);
+  document.getElementById('uploadBtn').addEventListener('click', (e) => {
+    e.stopPropagation();
+    document.getElementById('fileInput').click();
+  });
+  setupDragDrop();
 });
 
-// 드래그 앤 드롭 이벤트
-const uploadArea = document.getElementById('uploadArea');
-
-uploadArea.addEventListener('dragover', (e) => {
-  e.preventDefault();
-  uploadArea.classList.add('drag-over');
-});
-
-uploadArea.addEventListener('dragleave', () => {
-  uploadArea.classList.remove('drag-over');
-});
-
-uploadArea.addEventListener('drop', (e) => {
-  e.preventDefault();
-  uploadArea.classList.remove('drag-over');
-
-  const files = e.dataTransfer.files;
-  if (files.length > 0) {
-    handleFile(files[0]);
+function loadApiKey() {
+  geminiApiKey = localStorage.getItem('gemini_api_key');
+  if (geminiApiKey) {
+    document.getElementById('apiKeyInput').value = geminiApiKey;
+    document.getElementById('apiKeyStatus').textContent =
+      '✓ API 키가 저장되어 있습니다';
+    document.getElementById('apiKeyStatus').className =
+      'api-key-status success';
+    document.getElementById('uploadSection').style.display = 'block';
   }
-});
+}
+
+function saveApiKey() {
+  const apiKey = document.getElementById('apiKeyInput').value.trim();
+
+  if (!apiKey) {
+    document.getElementById('apiKeyStatus').textContent =
+      '✗ API 키를 입력해주세요';
+    document.getElementById('apiKeyStatus').className = 'api-key-status error';
+    return;
+  }
+
+  if (!apiKey.startsWith('AIza')) {
+    document.getElementById('apiKeyStatus').textContent =
+      '✗ 올바른 Gemini API 키 형식이 아닙니다';
+    document.getElementById('apiKeyStatus').className = 'api-key-status error';
+    return;
+  }
+
+  geminiApiKey = apiKey;
+  localStorage.setItem('gemini_api_key', apiKey);
+
+  document.getElementById('apiKeyStatus').textContent =
+    '✓ API 키가 저장되었습니다!';
+  document.getElementById('apiKeyStatus').className = 'api-key-status success';
+  document.getElementById('uploadSection').style.display = 'block';
+
+  setTimeout(() => {
+    document
+      .getElementById('uploadSection')
+      .scrollIntoView({ behavior: 'smooth' });
+  }, 500);
+}
+
+function setupDragDrop() {
+  const uploadArea = document.getElementById('uploadArea');
+
+  uploadArea.addEventListener('dragover', (e) => {
+    e.preventDefault();
+    uploadArea.classList.add('drag-over');
+  });
+
+  uploadArea.addEventListener('dragleave', () => {
+    uploadArea.classList.remove('drag-over');
+  });
+
+  uploadArea.addEventListener('drop', (e) => {
+    e.preventDefault();
+    uploadArea.classList.remove('drag-over');
+
+    const files = e.dataTransfer.files;
+    if (files.length > 0) {
+      handleFile(files[0]);
+    }
+  });
+}
 
 function handleFileSelect(e) {
   const file = e.target.files[0];
@@ -134,45 +122,52 @@ function removeImage() {
   document.getElementById('previewSection').style.display = 'none';
 }
 
+// 파일을 base64로 변환
+function fileToBase64(file) {
+  return new Promise((resolve, reject) => {
+    const reader = new FileReader();
+    reader.onload = () => {
+      // data:image/png;base64,xxxx 에서 base64 부분만 추출
+      const base64 = reader.result.split(',')[1];
+      resolve(base64);
+    };
+    reader.onerror = reject;
+    reader.readAsDataURL(file);
+  });
+}
+
 async function analyzeImage() {
   if (!uploadedFile) {
     alert('이미지를 먼저 업로드해주세요.');
     return;
   }
 
-  // UI 전환
+  if (!geminiApiKey) {
+    alert('Gemini API 키를 먼저 설정해주세요.');
+    return;
+  }
+
   document.getElementById('previewSection').style.display = 'none';
   document.getElementById('loadingSection').style.display = 'block';
   document.getElementById('results').style.display = 'none';
   document.getElementById('errorSection').style.display = 'none';
-
-  // 버튼 비활성화
   document.getElementById('analyzeBtn').disabled = true;
 
   try {
-    updateProgress(10, '이미지 전처리 중...');
+    // 이미지를 base64로 변환
+    updateProgress(20, '이미지를 준비하는 중...');
+    const base64Image = await fileToBase64(uploadedFile);
+    const mimeType = uploadedFile.type || 'image/png';
 
-    // Tesseract.js OCR 실행
-    const result = await Tesseract.recognize(uploadedFile, 'eng+kor', {
-      logger: (m) => {
-        if (m.status === 'recognizing text') {
-          const progress = 10 + Math.round(m.progress * 80);
-          updateProgress(progress, '텍스트 인식 중...');
-        }
-      },
-    });
-
-    updateProgress(95, '프로세스 분석 중...');
-    console.log('OCR 원본 결과:', result.data.text);
-
-    // OCR 결과에서 프로세스 정보 추출
-    const processes = parseOCRText(result.data.text);
+    // Gemini Vision으로 직접 분석
+    updateProgress(50, 'Gemini Vision으로 이미지 분석 중...');
+    const processes = await analyzeWithGeminiVision(base64Image, mimeType);
 
     updateProgress(100, '분석 완료!');
 
-    if (processes.length === 0) {
+    if (!processes || processes.length === 0) {
       showError(
-        '프로세스 정보를 찾을 수 없습니다.\n\n가능한 원인:\n- 이미지가 너무 흐릿함\n- 프로세스명과 메모리가 명확히 보이지 않음\n\n더 선명한 이미지로 다시 시도해주세요.',
+        '프로세스 정보를 찾을 수 없습니다.\n\n작업관리자의 프로세스/세부정보 탭이 잘 보이는 스크린샷으로 다시 시도해주세요.',
       );
       return;
     }
@@ -180,201 +175,121 @@ async function analyzeImage() {
     analysisResults = processes;
     displayResults(analysisResults);
   } catch (error) {
-    console.error('OCR 에러:', error);
-    showError(
-      '이미지 분석 중 오류가 발생했습니다.\n\n' +
-        error.message +
-        '\n\n다시 시도해주세요.',
-    );
+    console.error('분석 에러:', error);
+    showError('분석 중 오류가 발생했습니다.\n\n' + error.message);
   } finally {
     document.getElementById('analyzeBtn').disabled = false;
   }
+}
+
+async function analyzeWithGeminiVision(base64Image, mimeType) {
+  const prompt = `이 이미지는 Windows 작업관리자 스크린샷입니다.
+
+이미지에서 프로세스 목록을 분석하여 JSON 배열로만 반환해주세요.
+각 프로세스는 다음 형식이어야 합니다:
+
+{
+  "name": "프로세스 이름 (깔끔하게 정리, 괄호 안 숫자 제거)",
+  "memory": 메모리_MB_숫자값,
+  "category": "safe/caution/critical 중 하나",
+  "description": "한글로 상세한 설명 (종료 시 영향, 역할 등 포함)"
+}
+
+카테고리 기준:
+- safe: 일반 응용 프로그램 (Chrome, Edge, VS Code, Discord, 카카오톡, 게임 등)
+- caution: 시스템 서비스, 보안 프로그램 (Defender, 드라이버, AhnLab, antivirus 등)
+- critical: 필수 시스템 프로세스 (System, explorer.exe, dwm.exe, svchost, csrss, winlogon 등)
+
+규칙:
+- 반드시 JSON 배열만 반환하고, 앞뒤에 다른 텍스트 없이 [ 로 시작해서 ] 로 끝내세요
+- 마크다운 코드블록(\`\`\`) 사용 금지
+- memory 값은 MB 단위 숫자만 (예: 1284.5), 텍스트 없이
+- 이미지에서 읽을 수 없는 값은 0으로 처리`;
+
+  const requestBody = {
+    contents: [
+      {
+        parts: [
+          {
+            inline_data: {
+              mime_type: mimeType,
+              data: base64Image,
+            },
+          },
+          {
+            text: prompt,
+          },
+        ],
+      },
+    ],
+    generationConfig: {
+      temperature: 0.1,
+      maxOutputTokens: 8192,
+    },
+  };
+
+  const response = await fetch(`${GEMINI_API_URL}?key=${geminiApiKey}`, {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/json',
+    },
+    body: JSON.stringify(requestBody),
+  });
+
+  if (!response.ok) {
+    const error = await response.json();
+    throw new Error(error.error?.message || 'API 호출 실패');
+  }
+
+  const data = await response.json();
+
+  if (!data.candidates || data.candidates.length === 0) {
+    throw new Error('Gemini로부터 응답을 받지 못했습니다.');
+  }
+
+  const textResponse = data.candidates[0].content.parts[0].text;
+  console.log('Gemini 응답:', textResponse);
+
+  return safeParseJSON(textResponse);
+}
+
+// 안전한 JSON 파싱 - 여러 방식으로 시도
+function safeParseJSON(text) {
+  let jsonText = text.trim();
+
+  // 1. 마크다운 코드블록 제거
+  jsonText = jsonText.replace(/```json\s*/gi, '').replace(/```\s*/g, '');
+  jsonText = jsonText.trim();
+
+  // 2. JSON 배열 부분만 정규식으로 추출
+  const arrayMatch = jsonText.match(/\[[\s\S]*\]/);
+  if (arrayMatch) {
+    jsonText = arrayMatch[0];
+  }
+
+  try {
+    const parsed = JSON.parse(jsonText);
+    // 배열인지 확인
+    if (Array.isArray(parsed)) {
+      return parsed;
+    }
+    // 객체 안에 배열이 있는 경우
+    const values = Object.values(parsed);
+    const arr = values.find((v) => Array.isArray(v));
+    if (arr) return arr;
+  } catch (e) {
+    console.error('JSON 파싱 실패:', e);
+    console.error('파싱 시도한 텍스트:', jsonText);
+    throw new Error('AI 응답을 파싱할 수 없습니다. 다시 시도해주세요.');
+  }
+
+  throw new Error('프로세스 목록을 찾을 수 없습니다.');
 }
 
 function updateProgress(percentage, message) {
   document.getElementById('progressBar').style.width = percentage + '%';
   document.getElementById('progressText').textContent = percentage + '%';
   document.getElementById('loadingSubtext').textContent = message;
-}
-
-function parseOCRText(text) {
-  const processes = [];
-
-  // 전체 텍스트를 정제
-  const cleanText = text.replace(/\s+/g, ' ');
-
-  console.log('정제된 텍스트:', cleanText);
-
-  // 패턴 1: Google Chrome(18) © 0% 1,2845MB
-  // 프로세스명(숫자) 기호 퍼센트 메모리
-  const pattern1 =
-    /@?\s*([A-Za-z가-힣\s]+?)\s*\(\d+\)\s*[©®™]?\s*\d+%\s+([\d,]+)MB/gi;
-
-  let match;
-  while ((match = pattern1.exec(text)) !== null) {
-    let name = match[1].trim();
-    let memoryStr = match[2].replace(/,/g, '');
-
-    // 메모리 값 정규화: 1,2845 → 1284.5
-    let memory = parseFloat(memoryStr);
-    if (memory > 10000) {
-      memory = memory / 10; // 소수점 위치 수정
-    }
-
-    if (memory > 0 && name.length > 1) {
-      const category = categorizeProcess(name);
-      processes.push({
-        name: name,
-        memory: memory,
-        category: category,
-        description: getProcessDescription(name, category),
-      });
-      console.log('파싱 성공 (패턴1):', name, memory + 'MB');
-    }
-  }
-
-  // 패턴 2: Tal Windows 탐색기 0% 179.5MB
-  // 기호 프로세스명 퍼센트 메모리
-  const pattern2 =
-    /[>@Tal\[\]]+\s*([A-Za-z가-힣\s]+?)\s+\d+(?:\.\d+)?%\s+([\d,.]+)MB/gi;
-
-  while ((match = pattern2.exec(text)) !== null) {
-    let name = match[1].trim();
-    let memoryStr = match[2].replace(/,/g, '');
-    let memory = parseFloat(memoryStr);
-
-    if (memory > 10000) {
-      memory = memory / 10;
-    }
-
-    if (memory > 0 && name.length > 1) {
-      const category = categorizeProcess(name);
-      processes.push({
-        name: name,
-        memory: memory,
-        category: category,
-        description: getProcessDescription(name, category),
-      });
-      console.log('파싱 성공 (패턴2):', name, memory + 'MB');
-    }
-  }
-
-  // 패턴 3: 단순 패턴 - 프로세스명 메모리MB
-  const pattern3 = /([A-Za-z가-힣\s]{3,}?)\s+([\d,]+(?:\.\d+)?)\s*MB/gi;
-
-  while ((match = pattern3.exec(text)) !== null) {
-    let name = match[1].trim();
-    let memoryStr = match[2].replace(/,/g, '');
-    let memory = parseFloat(memoryStr);
-
-    // 숫자만 있는 이름 제외
-    if (/^\d+$/.test(name)) continue;
-
-    if (memory > 10000) {
-      memory = memory / 10;
-    }
-
-    if (memory > 0 && memory < 50000 && name.length > 2) {
-      const category = categorizeProcess(name);
-      processes.push({
-        name: name,
-        memory: memory,
-        category: category,
-        description: getProcessDescription(name, category),
-      });
-      console.log('파싱 성공 (패턴3):', name, memory + 'MB');
-    }
-  }
-
-  // 중복 제거 (같은 프로세스명)
-  const uniqueProcesses = [];
-  const seen = new Set();
-
-  for (const proc of processes) {
-    const key = proc.name.toLowerCase().replace(/\s+/g, '');
-    if (!seen.has(key)) {
-      seen.add(key);
-      uniqueProcesses.push(proc);
-    } else {
-      console.log('중복 제거:', proc.name);
-    }
-  }
-
-  console.log('최종 파싱된 프로세스 수:', uniqueProcesses.length);
-  return uniqueProcesses;
-}
-
-function categorizeProcess(name) {
-  const lowerName = name.toLowerCase();
-
-  for (const critical of processDatabase.critical) {
-    if (lowerName.includes(critical.toLowerCase())) {
-      return 'critical';
-    }
-  }
-
-  for (const safe of processDatabase.safe) {
-    if (lowerName.includes(safe.toLowerCase())) {
-      return 'safe';
-    }
-  }
-
-  for (const caution of processDatabase.caution) {
-    if (lowerName.includes(caution.toLowerCase())) {
-      return 'caution';
-    }
-  }
-
-  return 'caution';
-}
-
-function getProcessDescription(name, category) {
-  const lowerName = name.toLowerCase();
-
-  if (category === 'critical') {
-    if (lowerName.includes('system')) {
-      return 'Windows 커널 프로세스 - 절대 종료 불가';
-    } else if (lowerName.includes('explorer') || lowerName.includes('탐색기')) {
-      return 'Windows 탐색기 - 종료 시 화면이 사라짐';
-    } else if (lowerName.includes('dwm')) {
-      return '화면 관리자 - 종료 시 화면 표시 오류';
-    }
-    return '시스템 필수 프로세스 - 종료하면 안됨';
-  } else if (category === 'safe') {
-    if (
-      lowerName.includes('chrome') ||
-      lowerName.includes('edge') ||
-      lowerName.includes('firefox')
-    ) {
-      return '웹 브라우저 - 안전하게 종료 가능';
-    } else if (
-      lowerName.includes('discord') ||
-      lowerName.includes('kakao') ||
-      lowerName.includes('telegram')
-    ) {
-      return '메신저 앱 - 안전하게 종료 가능';
-    } else if (
-      lowerName.includes('code') ||
-      lowerName.includes('notepad') ||
-      lowerName.includes('studio')
-    ) {
-      return '개발 도구 / 편집기 - 안전하게 종료 가능';
-    } else if (lowerName.includes('관리자')) {
-      return '작업 관리자 - 안전하게 종료 가능';
-    }
-    return '일반 응용 프로그램 - 안전하게 종료 가능';
-  } else {
-    if (lowerName.includes('runtime') || lowerName.includes('broker')) {
-      return 'Windows 시스템 서비스 - 확인 후 종료';
-    } else if (lowerName.includes('nvidia') || lowerName.includes('amd')) {
-      return '그래픽 드라이버 - 게임/영상 작업 시 필요';
-    } else if (lowerName.includes('antimalware')) {
-      return 'Windows Defender - 바이러스 백신 서비스';
-    } else if (lowerName.includes('ahnlab')) {
-      return 'AhnLab 보안 프로그램 - 확인 후 종료';
-    }
-    return '시스템 서비스 - 용도 확인 후 종료';
-  }
 }
 
 function displayResults(processes) {
@@ -385,12 +300,11 @@ function displayResults(processes) {
   const criticalProcesses = processes.filter((p) => p.category === 'critical');
   const cautionProcesses = processes.filter((p) => p.category === 'caution');
 
-  const totalMemory = processes.reduce((sum, p) => sum + p.memory, 0);
-  const safeMemory = safeProcesses.reduce((sum, p) => sum + p.memory, 0);
+  const safeMemory = safeProcesses.reduce((sum, p) => sum + (p.memory || 0), 0);
 
   statsDiv.innerHTML = `
         <div class="stat-card">
-            <h3>전체 프로세스</h3>
+            <h3>인식된 프로세스</h3>
             <div class="value">${processes.length}</div>
         </div>
         <div class="stat-card safe">
@@ -453,7 +367,9 @@ function generateCategoryHTML(category, processes, title) {
         ? '주의 필요'
         : '종료 금지';
 
-  const sortedProcesses = processes.sort((a, b) => b.memory - a.memory);
+  const sortedProcesses = [...processes].sort(
+    (a, b) => (b.memory || 0) - (a.memory || 0),
+  );
 
   return `
         <div class="process-category">
@@ -466,7 +382,7 @@ function generateCategoryHTML(category, processes, title) {
                 <div class="process-item">
                     <div class="process-info">
                         <div class="process-name">${p.name}</div>
-                        <div class="process-memory">메모리 사용량: ${p.memory.toFixed(1)} MB</div>
+                        <div class="process-memory">메모리 사용량: ${(p.memory || 0).toFixed(1)} MB</div>
                         <div class="process-description">${p.description}</div>
                     </div>
                     <span class="process-status ${statusClass}">${statusText}</span>
@@ -488,7 +404,7 @@ function exportReport() {
   if (!analysisResults) return;
 
   const safeProcesses = analysisResults.filter((p) => p.category === 'safe');
-  const safeMemory = safeProcesses.reduce((sum, p) => sum + p.memory, 0);
+  const safeMemory = safeProcesses.reduce((sum, p) => sum + (p.memory || 0), 0);
 
   let report = '프로세스 분석 보고서\n';
   report += '='.repeat(50) + '\n\n';
@@ -499,7 +415,8 @@ function exportReport() {
   report += '안전하게 종료 가능한 프로세스:\n';
   report += '-'.repeat(50) + '\n';
   safeProcesses.forEach((p) => {
-    report += `${p.name} - ${p.memory.toFixed(1)} MB\n`;
+    report += `${p.name} - ${(p.memory || 0).toFixed(1)} MB\n`;
+    report += `  ${p.description}\n\n`;
   });
 
   const blob = new Blob([report], { type: 'text/plain' });
@@ -517,4 +434,7 @@ function resetAnalysis() {
   document.getElementById('results').style.display = 'none';
   document.getElementById('errorSection').style.display = 'none';
   document.getElementById('loadingSection').style.display = 'none';
+  document
+    .getElementById('uploadSection')
+    .scrollIntoView({ behavior: 'smooth' });
 }
