@@ -14,6 +14,7 @@ const processDatabase = {
     'registry',
     'fontdrvhost.exe',
     'conhost.exe',
+    'windows 탐색기',
   ],
   safe: [
     'chrome.exe',
@@ -35,6 +36,10 @@ const processDatabase = {
     'vlc.exe',
     'notion.exe',
     'obsidian.exe',
+    'google chrome',
+    'microsoft edge',
+    'visual studio code',
+    '작업 관리자',
   ],
   caution: [
     'antimalware',
@@ -47,6 +52,7 @@ const processDatabase = {
     'searchindexer.exe',
     'securityhealthservice.exe',
     'audiodg.exe',
+    'activation licensing',
   ],
 };
 
@@ -58,12 +64,14 @@ document
   .getElementById('fileInput')
   .addEventListener('change', handleFileSelect);
 
-// 드래그 앤 드롭 이벤트
-const uploadArea = document.getElementById('uploadArea');
-
-uploadArea.addEventListener('click', () => {
+// 업로드 버튼 클릭 이벤트 (이벤트 버블링 방지)
+document.getElementById('uploadBtn').addEventListener('click', (e) => {
+  e.stopPropagation();
   document.getElementById('fileInput').click();
 });
+
+// 드래그 앤 드롭 이벤트
+const uploadArea = document.getElementById('uploadArea');
 
 uploadArea.addEventListener('dragover', (e) => {
   e.preventDefault();
@@ -136,28 +144,29 @@ async function analyzeImage() {
   document.getElementById('analyzeBtn').disabled = true;
 
   try {
-    // Tesseract.js OCR 실행
-    const result = await Tesseract.recognize(
-      uploadedFile,
-      'eng+kor', // 영어 + 한글 인식
-      {
-        logger: (m) => {
-          if (m.status === 'recognizing text') {
-            const progress = Math.round(m.progress * 100);
-            updateProgress(progress, '텍스트 인식 중...');
-          }
-        },
-      },
-    );
+    updateProgress(10, '이미지 전처리 중...');
 
-    updateProgress(100, '분석 완료!');
+    // Tesseract.js OCR 실행
+    const result = await Tesseract.recognize(uploadedFile, 'eng+kor', {
+      logger: (m) => {
+        if (m.status === 'recognizing text') {
+          const progress = 10 + Math.round(m.progress * 80);
+          updateProgress(progress, '텍스트 인식 중...');
+        }
+      },
+    });
+
+    updateProgress(95, '프로세스 분석 중...');
+    console.log('OCR 원본 결과:', result.data.text);
 
     // OCR 결과에서 프로세스 정보 추출
     const processes = parseOCRText(result.data.text);
 
+    updateProgress(100, '분석 완료!');
+
     if (processes.length === 0) {
       showError(
-        '프로세스 정보를 찾을 수 없습니다. 더 선명한 이미지로 다시 시도해주세요.',
+        '프로세스 정보를 찾을 수 없습니다.\n\n가능한 원인:\n- 이미지가 너무 흐릿함\n- 프로세스명과 메모리가 명확히 보이지 않음\n\n더 선명한 이미지로 다시 시도해주세요.',
       );
       return;
     }
@@ -166,7 +175,11 @@ async function analyzeImage() {
     displayResults(analysisResults);
   } catch (error) {
     console.error('OCR 에러:', error);
-    showError('이미지 분석 중 오류가 발생했습니다. 다시 시도해주세요.');
+    showError(
+      '이미지 분석 중 오류가 발생했습니다.\n\n' +
+        error.message +
+        '\n\n다시 시도해주세요.',
+    );
   } finally {
     document.getElementById('analyzeBtn').disabled = false;
   }
@@ -179,37 +192,29 @@ function updateProgress(percentage, message) {
 }
 
 function parseOCRText(text) {
-  const lines = text.split('\n').filter((line) => line.trim());
   const processes = [];
+  const lines = text.split('\n');
 
-  console.log('OCR 원본 텍스트:', text);
+  console.log('총 라인 수:', lines.length);
 
-  // 다양한 패턴 매칭
-  const patterns = [
-    // 프로세스명.exe 1,234 MB
-    /([a-zA-Z0-9가-힣._-]+\.exe)\s+([\d,]+)\s*(MB|KB|GB|M|K|G)/gi,
-    // 프로세스명 1,234 MB
-    /([a-zA-Z0-9가-힣._-]+)\s+([\d,]+)\s*(MB|KB|GB|M|K|G)/gi,
-    // 프로세스명: 1234MB
-    /([a-zA-Z0-9가-힣._-]+)[:\s]+([\d,]+)\s*(MB|KB|GB|M|K|G)/gi,
-  ];
+  for (let i = 0; i < lines.length; i++) {
+    const line = lines[i].trim();
+    if (!line) continue;
 
-  for (const pattern of patterns) {
-    let match;
-    while ((match = pattern.exec(text)) !== null) {
-      const name = match[1].trim();
-      let memory = parseFloat(match[2].replace(/,/g, ''));
-      const unit = match[3].toUpperCase();
+    // 패턴 1: 프로세스명 + 메모리 (MB 단위)
+    // 예: Google Chrome(18) 1,284.5MB
+    // 예: Microsoft Edge(10) 295.5MB
+    const pattern1 = /([a-zA-Z0-9가-힣\s._()-]+?)\s+([\d,]+\.?\d*)\s*MB/i;
+    const match1 = line.match(pattern1);
 
-      // 단위 변환 (MB 기준)
-      if (unit.startsWith('K')) {
-        memory = memory / 1024;
-      } else if (unit.startsWith('G')) {
-        memory = memory * 1024;
-      }
+    if (match1) {
+      let name = match1[1].trim();
+      let memory = parseFloat(match1[2].replace(/,/g, ''));
 
-      // 중복 제거
-      if (!processes.find((p) => p.name === name) && memory > 0) {
+      // 괄호 안 숫자 제거 (프로세스 개수)
+      name = name.replace(/\(\d+\)$/, '').trim();
+
+      if (memory > 0 && name.length > 1) {
         const category = categorizeProcess(name);
         processes.push({
           name: name,
@@ -217,12 +222,25 @@ function parseOCRText(text) {
           category: category,
           description: getProcessDescription(name, category),
         });
+        console.log('파싱 성공:', name, memory + 'MB');
       }
     }
   }
 
-  console.log('파싱된 프로세스:', processes);
-  return processes;
+  // 중복 제거 (같은 프로세스명)
+  const uniqueProcesses = [];
+  const seen = new Set();
+
+  for (const proc of processes) {
+    const key = proc.name.toLowerCase();
+    if (!seen.has(key)) {
+      seen.add(key);
+      uniqueProcesses.push(proc);
+    }
+  }
+
+  console.log('최종 파싱된 프로세스 수:', uniqueProcesses.length);
+  return uniqueProcesses;
 }
 
 function categorizeProcess(name) {
@@ -255,7 +273,7 @@ function getProcessDescription(name, category) {
   if (category === 'critical') {
     if (lowerName.includes('system')) {
       return 'Windows 커널 프로세스 - 절대 종료 불가';
-    } else if (lowerName.includes('explorer')) {
+    } else if (lowerName.includes('explorer') || lowerName.includes('탐색기')) {
       return 'Windows 탐색기 - 종료 시 화면이 사라짐';
     } else if (lowerName.includes('dwm')) {
       return '화면 관리자 - 종료 시 화면 표시 오류';
@@ -274,7 +292,11 @@ function getProcessDescription(name, category) {
       lowerName.includes('telegram')
     ) {
       return '메신저 앱 - 안전하게 종료 가능';
-    } else if (lowerName.includes('code') || lowerName.includes('notepad')) {
+    } else if (
+      lowerName.includes('code') ||
+      lowerName.includes('notepad') ||
+      lowerName.includes('studio')
+    ) {
       return '개발 도구 / 편집기 - 안전하게 종료 가능';
     }
     return '일반 응용 프로그램 - 안전하게 종료 가능';
@@ -283,6 +305,8 @@ function getProcessDescription(name, category) {
       return 'Windows 시스템 서비스 - 확인 후 종료';
     } else if (lowerName.includes('nvidia') || lowerName.includes('amd')) {
       return '그래픽 드라이버 - 게임/영상 작업 시 필요';
+    } else if (lowerName.includes('antimalware')) {
+      return 'Windows Defender - 바이러스 백신 서비스';
     }
     return '시스템 서비스 - 용도 확인 후 종료';
   }
