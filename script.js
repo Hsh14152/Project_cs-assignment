@@ -184,27 +184,40 @@ async function analyzeImage() {
 
 async function analyzeWithGeminiVision(base64Image, mimeType) {
   const prompt = `이 이미지는 Windows 작업관리자 스크린샷입니다.
+이미지에서 프로세스 목록을 분석하여 반드시 JSON 배열만 반환하세요. 다른 텍스트, 마크다운 코드블록 없이 [ 로 시작해서 ] 로 끝나야 합니다.
 
-이미지에서 프로세스 목록을 분석하여 JSON 배열로만 반환해주세요.
-각 프로세스는 다음 형식이어야 합니다:
+각 항목 형식:
+{"name":"프로세스명","memory":MB숫자,"category":"safe/caution/critical","description":"한글로 상세한 설명(종료 시 영향, 역할 등 포함)"}
 
-{
-  "name": "프로세스 이름 (깔끔하게 정리, 괄호 안 숫자 제거)",
-  "memory": 메모리_MB_숫자값,
-  "category": "safe/caution/critical 중 하나",
-  "description": "한글로 상세한 설명 (종료 시 영향, 역할 등 포함)"
-}
+카테고리 기준 (아래 기준을 따르세요):
 
-카테고리 기준:
-- safe: 일반 응용 프로그램 (Chrome, Edge, VS Code, Discord, 카카오톡, 게임 등)
-- caution: 시스템 서비스, 보안 프로그램 (Defender, 드라이버, AhnLab, antivirus 등)
-- critical: 필수 시스템 프로세스 (System, explorer.exe, dwm.exe, svchost, csrss, winlogon 등)
+safe (종료 가능한 일반 앱):
+- 브라우저: Chrome, Edge, Firefox, Whale 등
+- 메신저/SNS: 카카오톡, Discord, Slack 등
+- 개발 도구: VS Code, IntelliJ, PyCharm 등
+- 게임 및 게임 관련: Steam, 게임 실행 파일 등
+- 미디어: Spotify, VLC, 팟플레이어 등
+- 작업관리자 (Taskmgr.exe) ← 반드시 safe
+- 파일 탐색기 (explorer.exe 제외, 별도 창으로 열린 경우) ← safe
+- 기타 사용자가 직접 실행한 앱
 
-규칙:
-- 반드시 JSON 배열만 반환하고, 앞뒤에 다른 텍스트 없이 [ 로 시작해서 ] 로 끝내세요
-- 마크다운 코드블록(\`\`\`) 사용 금지
-- memory 값은 MB 단위 숫자만 (예: 1284.5), 텍스트 없이
-- 이미지에서 읽을 수 없는 값은 0으로 처리`;
+caution (주의 필요, 종료 시 일부 기능 영향):
+- 백신/보안: AhnLab, V3, Windows Defender, MalwareBytes 등
+- 드라이버 관련 서비스
+- OneDrive, Google Drive 동기화 프로세스
+- 프린터/하드웨어 관련 유틸리티
+
+critical (절대 종료 금지 - Windows 핵심 시스템만):
+- System, System Idle Process
+- explorer.exe (바탕화면/시작메뉴 담당, 단 파일 탐색기 창이 아님)
+- dwm.exe (화면 렌더링)
+- csrss.exe (클라이언트 서버 런타임)
+- winlogon.exe (로그인)
+- lsass.exe (보안 인증)
+- svchost.exe (서비스 호스트)
+- wininit.exe, smss.exe, ntoskrnl.exe
+
+memory는 MB 단위 숫자만. 읽기 어려우면 0.`;
 
   const requestBody = {
     contents: [
