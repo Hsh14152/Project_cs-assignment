@@ -1,98 +1,143 @@
-<!DOCTYPE html>
+<!doctype html>
 <html lang="ko">
-<head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>프로세스 분석기 - AI 기반 메모리 최적화</title>
-    <link rel="stylesheet" href="style.css">
-</head>
-<body>
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <link rel="shortcut icon" href="/Process.png" />
+    <title>AI 기반 프로세스 분석기</title>
+    <link rel="stylesheet" href="style.css" />
+  </head>
+  <body>
     <div class="container">
-        <div class="header">
-            <h1>🚀 프로세스 분석기</h1>
-            <p>작업관리자 스크린샷을 AI로 분석하여 안전한 메모리 최적화를 도와드립니다</p>
+      <div class="header">
+        <h1>프로세스 분석기</h1>
+        <p>
+          Gemini AI로 작업관리자를 분석하여 안전한 메모리 최적화를 도와드립니다
+        </p>
+      </div>
+
+      <div class="content">
+        <!-- API 키 입력 섹션 -->
+        <div class="api-key-section" id="apiKeySection">
+          <h2>🔑 Gemini API 키 설정</h2>
+          <div class="api-key-info">
+            <p>
+              <strong>무료 API 키 발급:</strong>
+              <a href="https://aistudio.google.com/app/apikey" target="_blank"
+                >Google AI Studio</a
+              >
+            </p>
+            <p style="font-size: 0.9rem; color: #666; margin-top: 5px">
+              ✓ 무료 할당량: 분당 15회, 일일 1,500회<br />
+              ✓ API 키는 브라우저에만 저장되며 외부로 전송되지 않습니다
+            </p>
+          </div>
+          <div class="api-key-input-group">
+            <input
+              type="text"
+              id="apiKeyInput"
+              placeholder="Gemini API 키를 입력하세요 (예: AIzaSy...)"
+            />
+            <button class="btn-save-key" onclick="saveApiKey()">저장</button>
+          </div>
+          <div id="apiKeyStatus" class="api-key-status"></div>
         </div>
 
-        <div class="content">
-            <!-- 업로드 섹션 -->
-            <div class="upload-section">
-                <h2>📸 작업관리자 스크린샷 업로드</h2>
+        <!-- 업로드 섹션 -->
+        <div class="upload-section" id="uploadSection" style="display: none">
+          <h2>📸 작업관리자 스크린샷 업로드</h2>
 
-                <div class="upload-area" id="uploadArea">
-                    <div class="upload-icon">📁</div>
-                    <p class="upload-text">이미지를 드래그하거나 클릭하여 업로드</p>
-                    <p class="upload-subtext">PNG, JPG, JPEG 형식 지원 (최대 10MB)</p>
-                    <input type="file" id="fileInput" accept="image/*" hidden>
-                    <button class="btn-upload" onclick="document.getElementById('fileInput').click()">
-                        파일 선택
-                    </button>
-                </div>
+          <div class="upload-area" id="uploadArea">
+            <div class="upload-icon">📁</div>
+            <p class="upload-text">이미지를 드래그하거나 클릭하여 업로드</p>
+            <p class="upload-subtext">PNG, JPG, JPEG 형식 지원 (최대 10MB)</p>
+            <input type="file" id="fileInput" accept="image/*" hidden />
+            <button class="btn-upload" id="uploadBtn">파일 선택</button>
+          </div>
 
-                <div class="preview-section" id="previewSection" style="display: none;">
-                    <div class="preview-header">
-                        <h3>📋 업로드된 이미지</h3>
-                        <button class="btn-remove" onclick="removeImage()">✕ 제거</button>
-                    </div>
-                    <img id="previewImage" alt="Preview">
-                    <div class="button-group">
-                        <button class="btn-analyze" onclick="analyzeImage()">
-                            🔍 AI 분석 시작
-                        </button>
-                    </div>
-                </div>
-
-                <div class="info-box">
-                    <strong>💡 사용 방법:</strong>
-                    <ol>
-                        <li>작업관리자 실행 (Ctrl + Shift + Esc)</li>
-                        <li>세부 정보 탭 또는 프로세스 탭 선택</li>
-                        <li>화면 캡처 (Win + Shift + S 또는 스크린샷 도구)</li>
-                        <li>캡처한 이미지를 이 페이지에 업로드</li>
-                    </ol>
-                </div>
+          <div
+            class="preview-section"
+            id="previewSection"
+            style="display: none"
+          >
+            <div class="preview-header">
+              <h3>📋 업로드된 이미지</h3>
+              <button class="btn-remove" onclick="removeImage()">✕ 제거</button>
             </div>
-
-            <!-- 로딩 섹션 -->
-            <div class="loading-section" id="loadingSection" style="display: none;">
-                <div class="spinner"></div>
-                <p>AI가 이미지를 분석하고 있습니다...</p>
-                <p class="loading-subtext">프로세스 정보를 추출하고 안전성을 평가하는 중입니다</p>
+            <img id="previewImage" alt="Preview" />
+            <div class="button-group">
+              <button
+                class="btn-analyze"
+                id="analyzeBtn"
+                onclick="analyzeImage()"
+              >
+                🔍 AI 분석 시작
+              </button>
             </div>
+          </div>
 
-            <!-- 결과 섹션 -->
-            <div class="results-section" id="results" style="display: none;">
-                <h2>📊 분석 결과</h2>
-
-                <div class="stats" id="stats"></div>
-
-                <div class="process-list" id="processList"></div>
-
-                <div class="action-buttons">
-                    <button class="btn-secondary" onclick="exportReport()">
-                        📄 보고서 다운로드
-                    </button>
-                    <button class="btn-secondary" onclick="resetAnalysis()">
-                        🔄 새로 분석하기
-                    </button>
-                </div>
-            </div>
-
-            <!-- 에러 메시지 -->
-            <div class="error-section" id="errorSection" style="display: none;">
-                <div class="error-box">
-                    <h3>⚠️ 분석 실패</h3>
-                    <p id="errorMessage"></p>
-                    <button class="btn-secondary" onclick="resetAnalysis()">다시 시도</button>
-                </div>
-            </div>
+          <div class="info-box">
+            <strong>💡 사용 방법:</strong>
+            <ol>
+              <li>작업관리자 실행 (Ctrl + Shift + Esc)</li>
+              <li>세부 정보 탭 또는 프로세스 탭 선택</li>
+              <li>화면 캡처 (Win + Shift + S)</li>
+              <li>캡처한 이미지를 업로드하고 AI 분석</li>
+            </ol>
+          </div>
         </div>
 
-        <footer class="footer">
-            <p>⚠️ 중요: 시스템 프로세스는 절대 종료하지 마세요. 컴퓨터가 불안정해질 수 있습니다.</p>
-            <p class="footer-subtext">본 서비스는 참고용이며, 프로세스 종료는 신중히 결정하시기 바랍니다.</p>
-        </footer>
+        <!-- 로딩 섹션 -->
+        <div class="loading-section" id="loadingSection" style="display: none">
+          <div class="spinner"></div>
+          <p id="loadingText">AI가 이미지를 분석하고 있습니다...</p>
+          <p class="loading-subtext" id="loadingSubtext">
+            Gemini 2.5 flash로 이미지 분석 중
+          </p>
+          <div class="progress-container">
+            <div class="progress-bar" id="progressBar"></div>
+          </div>
+          <p class="progress-text" id="progressText">0%</p>
+        </div>
+
+        <!-- 결과 섹션 -->
+        <div class="results-section" id="results" style="display: none">
+          <h2>📊 분석 결과</h2>
+
+          <div class="stats" id="stats"></div>
+
+          <div class="process-list" id="processList"></div>
+
+          <div class="action-buttons">
+            <button class="btn-secondary" onclick="resetAnalysis()">
+              🔄 새로 분석하기
+            </button>
+          </div>
+        </div>
+
+        <!-- 에러 메시지 -->
+        <div class="error-section" id="errorSection" style="display: none">
+          <div class="error-box">
+            <h3>⚠️ 분석 실패</h3>
+            <p id="errorMessage"></p>
+            <button class="btn-secondary" onclick="resetAnalysis()">
+              다시 시도
+            </button>
+          </div>
+        </div>
+      </div>
+
+      <footer class="footer">
+        <p>
+          ⚠️ 중요: 시스템 프로세스는 절대 종료하지 마세요. 컴퓨터가 불안정해질
+          수 있습니다.
+        </p>
+        <p class="footer-subtext">
+          본 서비스는 참고용이며, 프로세스 종료는 신중히 결정하시기 바랍니다.
+        </p>
+      </footer>
     </div>
 
     <script src="script.js"></script>
-</body>
+  </body>
 </html>
