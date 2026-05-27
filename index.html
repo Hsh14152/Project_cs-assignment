@@ -7,51 +7,48 @@
     <title>AI 기반 프로세스 분석기</title>
     <link rel="stylesheet" href="style.css" />
   </head>
+
   <body>
     <div class="container">
       <div class="header">
         <h1>프로세스 분석기</h1>
+
         <p>
           Gemini AI로 작업관리자를 분석하여 안전한 메모리 최적화를 도와드립니다
         </p>
       </div>
 
       <div class="content">
-        <!-- API 키 입력 섹션 -->
+        <!-- API 키 섹션 -->
         <div class="api-key-section" id="apiKeySection">
-          <h2>🔑 Gemini API 키 설정</h2>
+          <h2>🔑 Gemini API 연결 상태</h2>
+
           <div class="api-key-info">
-            <p>
-              <strong>무료 API 키 발급:</strong>
-              <a href="https://aistudio.google.com/app/apikey" target="_blank"
-                >Google AI Studio</a
-              >
-            </p>
+            <p>서버에 안전하게 저장된 Gemini API를 사용합니다.</p>
+
             <p style="font-size: 0.9rem; color: #666; margin-top: 5px">
-              ✓ 무료 할당량: 분당 15회, 일일 1,500회<br />
-              ✓ API 키는 브라우저에만 저장되며 외부로 전송되지 않습니다
+              ✓ API 키는 브라우저에 노출되지 않습니다
             </p>
           </div>
-          <div class="api-key-input-group">
-            <input
-              type="text"
-              id="apiKeyInput"
-              placeholder="Gemini API 키를 입력하세요 (예: AIzaSy...)"
-            />
-            <button class="btn-save-key" onclick="saveApiKey()">저장</button>
+
+          <div id="apiKeyStatus" class="api-key-status success">
+            ✓ 서버 연결 준비 완료
           </div>
-          <div id="apiKeyStatus" class="api-key-status"></div>
         </div>
 
         <!-- 업로드 섹션 -->
-        <div class="upload-section" id="uploadSection" style="display: none">
+        <div class="upload-section" id="uploadSection">
           <h2>📸 작업관리자 스크린샷 업로드</h2>
 
           <div class="upload-area" id="uploadArea">
             <div class="upload-icon">📁</div>
+
             <p class="upload-text">이미지를 드래그하거나 클릭하여 업로드</p>
+
             <p class="upload-subtext">PNG, JPG, JPEG 형식 지원 (최대 10MB)</p>
+
             <input type="file" id="fileInput" accept="image/*" hidden />
+
             <button class="btn-upload" id="uploadBtn">파일 선택</button>
           </div>
 
@@ -62,9 +59,12 @@
           >
             <div class="preview-header">
               <h3>📋 업로드된 이미지</h3>
+
               <button class="btn-remove" onclick="removeImage()">✕ 제거</button>
             </div>
+
             <img id="previewImage" alt="Preview" />
+
             <div class="button-group">
               <button
                 class="btn-analyze"
@@ -78,6 +78,7 @@
 
           <div class="info-box">
             <strong>💡 사용 방법:</strong>
+
             <ol>
               <li>작업관리자 실행 (Ctrl + Shift + Esc)</li>
               <li>세부 정보 탭 또는 프로세스 탭 선택</li>
@@ -87,20 +88,24 @@
           </div>
         </div>
 
-        <!-- 로딩 섹션 -->
+        <!-- 로딩 -->
         <div class="loading-section" id="loadingSection" style="display: none">
           <div class="spinner"></div>
+
           <p id="loadingText">AI가 이미지를 분석하고 있습니다...</p>
+
           <p class="loading-subtext" id="loadingSubtext">
-            Gemini 2.5 flash로 이미지 분석 중
+            Gemini 2.5 Flash로 이미지 분석 중
           </p>
+
           <div class="progress-container">
             <div class="progress-bar" id="progressBar"></div>
           </div>
+
           <p class="progress-text" id="progressText">0%</p>
         </div>
 
-        <!-- 결과 섹션 -->
+        <!-- 결과 -->
         <div class="results-section" id="results" style="display: none">
           <h2>📊 분석 결과</h2>
 
@@ -115,11 +120,13 @@
           </div>
         </div>
 
-        <!-- 에러 메시지 -->
+        <!-- 에러 -->
         <div class="error-section" id="errorSection" style="display: none">
           <div class="error-box">
             <h3>⚠️ 분석 실패</h3>
+
             <p id="errorMessage"></p>
+
             <button class="btn-secondary" onclick="resetAnalysis()">
               다시 시도
             </button>
@@ -132,6 +139,7 @@
           ⚠️ 중요: 시스템 프로세스는 절대 종료하지 마세요. 컴퓨터가 불안정해질
           수 있습니다.
         </p>
+
         <p class="footer-subtext">
           본 서비스는 참고용이며, 프로세스 종료는 신중히 결정하시기 바랍니다.
         </p>
