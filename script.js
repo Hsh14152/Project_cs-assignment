@@ -121,6 +121,7 @@ function fileToBase64(file) {
 }
 
 async function analyzeImage() {
+  console.log('버튼 클릭됨');
   if (!uploadedFile) {
     alert('이미지를 먼저 업로드해주세요.');
     return;
@@ -224,7 +225,7 @@ memory는 MB 단위 숫자만. 읽기 어려우면 0.`;
       maxOutputTokens: 8192,
     },
   };
-
+  console.log('API 요청 시작');
   const response = await fetch('/api/analyze', {
     method: 'POST',
     headers: {
