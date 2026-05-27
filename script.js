@@ -1,35 +1,19 @@
-// gemini-2.0-flash-lite: 무료 티어에서 사용 가능한 최신 모델
-const GEMINI_API_URL =
-  'https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent';
-
 let uploadedFile = null;
 let analysisResults = null;
-let geminiApiKey = null;
 
 // 초기화
 document.addEventListener('DOMContentLoaded', () => {
-  loadApiKey();
   document
     .getElementById('fileInput')
     .addEventListener('change', handleFileSelect);
+
   document.getElementById('uploadBtn').addEventListener('click', (e) => {
     e.stopPropagation();
     document.getElementById('fileInput').click();
   });
+
   setupDragDrop();
 });
-
-function loadApiKey() {
-  geminiApiKey = localStorage.getItem('gemini_api_key');
-  if (geminiApiKey) {
-    document.getElementById('apiKeyInput').value = geminiApiKey;
-    document.getElementById('apiKeyStatus').textContent =
-      '✓ API 키가 저장되어 있습니다';
-    document.getElementById('apiKeyStatus').className =
-      'api-key-status success';
-    document.getElementById('uploadSection').style.display = 'block';
-  }
-}
 
 function saveApiKey() {
   const apiKey = document.getElementById('apiKeyInput').value.trim();
@@ -241,7 +225,7 @@ memory는 MB 단위 숫자만. 읽기 어려우면 0.`;
     },
   };
 
-  const response = await fetch(`${GEMINI_API_URL}?key=${geminiApiKey}`, {
+  const response = await fetch('/api/analyze', {
     method: 'POST',
     headers: {
       'Content-Type': 'application/json',
