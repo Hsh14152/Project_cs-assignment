@@ -159,8 +159,8 @@ async function analyzeImage() {
     const base64Image = await fileToBase64(uploadedFile);
     const mimeType = uploadedFile.type || 'image/png';
 
-    // Gemini Vision으로 직접 분석
-    updateProgress(50, 'Gemini Vision으로 이미지 분석 중...');
+    // Gemini로 직접 분석
+    updateProgress(50, 'Gemini 2.5 flash로 이미지 분석 중...');
     const processes = await analyzeWithGeminiVision(base64Image, mimeType);
 
     updateProgress(100, '분석 완료!');
@@ -352,7 +352,7 @@ function displayResults(processes) {
     listHTML += generateCategoryHTML(
       'critical',
       criticalProcesses,
-      '⛔ 종료하면 안되는 시스템 프로세스',
+      '🚫 종료하면 안되는 시스템 프로세스',
     );
   }
 
