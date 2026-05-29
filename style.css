@@ -626,3 +626,10 @@ body {
   color: #333;
   white-space: pre-line;
 }
+
+.action-buttons button {
+  flex: 1;
+  height: 70px;
+  font-size: 1.1rem;
+  font-weight: 600;
+}
