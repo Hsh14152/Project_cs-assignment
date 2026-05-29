@@ -574,3 +574,22 @@ body {
     align-self: flex-start;
   }
 }
+
+.example-section {
+  margin-top: 25px;
+  text-align: center;
+}
+
+.example-text {
+  color: #666;
+  margin: 10px 0 15px;
+  font-size: 0.95rem;
+}
+
+.example-image {
+  width: 100%;
+  max-width: 700px;
+  border-radius: 12px;
+  border: 1px solid #ddd;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.08);
+}

@@ -11,7 +11,7 @@
   <body>
     <div class="container">
       <div class="header">
-        <h1>프로세스 분석기</h1>
+        <h1>⚙️프로세스 분석기</h1>
 
         <p>
           Gemini AI로 작업관리자를 분석하여 안전한 메모리 최적화를 도와드립니다
@@ -19,7 +19,6 @@
       </div>
 
       <div class="content">
-        <!-- API 키 섹션 -->
         <div class="api-key-section" id="apiKeySection">
           <h2>🔑 Gemini API 연결 상태</h2>
 
@@ -36,7 +35,6 @@
           </div>
         </div>
 
-        <!-- 업로드 섹션 -->
         <div class="upload-section" id="uploadSection">
           <h2>📸 작업관리자 스크린샷 업로드</h2>
 
@@ -50,6 +48,20 @@
             <input type="file" id="fileInput" accept="image/*" hidden />
 
             <button class="btn-upload" id="uploadBtn">파일 선택</button>
+          </div>
+
+          <div class="example-section">
+            <h3>🖥️ 캡처 예시</h3>
+
+            <p class="example-text">
+              작업관리자의 프로세스와 메모리 사용량이 잘 보이게 캡처해주세요.
+            </p>
+
+            <img
+              src="/example.png"
+              alt="작업관리자 캡처 예시"
+              class="example-image"
+            />
           </div>
 
           <div
@@ -81,14 +93,13 @@
 
             <ol>
               <li>작업관리자 실행 (Ctrl + Shift + Esc)</li>
-              <li>세부 정보 탭 또는 프로세스 탭 선택</li>
+              <li>프로세스 탭 선택</li>
               <li>화면 캡처 (Win + Shift + S)</li>
               <li>캡처한 이미지를 업로드하고 AI 분석</li>
             </ol>
           </div>
         </div>
 
-        <!-- 로딩 -->
         <div class="loading-section" id="loadingSection" style="display: none">
           <div class="spinner"></div>
 
@@ -105,7 +116,6 @@
           <p class="progress-text" id="progressText">0%</p>
         </div>
 
-        <!-- 결과 -->
         <div class="results-section" id="results" style="display: none">
           <h2>📊 분석 결과</h2>
 
@@ -120,7 +130,6 @@
           </div>
         </div>
 
-        <!-- 에러 -->
         <div class="error-section" id="errorSection" style="display: none">
           <div class="error-box">
             <h3>⚠️ 분석 실패</h3>
