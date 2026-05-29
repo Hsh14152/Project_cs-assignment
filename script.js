@@ -419,7 +419,7 @@ ${JSON.stringify(analysisResults, null, 2)}
 - 메모리를 많이 사용하는 주요 원인 설명
 - 종료 추천 프로세스 언급
 - 실제로 체감 성능 향상이 있을지 설명
-- 너무 길게 쓰지 말 것
+- 3~5문장 이내로 작성
 - 한국어로 작성
 - 불필요한 인사말 금지
 `;
@@ -436,7 +436,7 @@ ${JSON.stringify(analysisResults, null, 2)}
       ],
       generationConfig: {
         temperature: 0.4,
-        maxOutputTokens: 500,
+        maxOutputTokens: 1500,
       },
     };
 
@@ -451,6 +451,7 @@ ${JSON.stringify(analysisResults, null, 2)}
     });
 
     const data = await response.json();
+    console.log(data);
 
     if (!response.ok) {
       throw new Error(data.error || '요약 생성 실패');
