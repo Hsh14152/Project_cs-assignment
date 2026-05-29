@@ -120,6 +120,7 @@ function fileToBase64(file) {
 
 async function analyzeImage() {
   console.log('버튼 클릭됨');
+
   if (!uploadedFile) {
     alert('이미지를 먼저 업로드해주세요.');
     return;
@@ -131,13 +132,53 @@ async function analyzeImage() {
   document.getElementById('errorSection').style.display = 'none';
   document.getElementById('analyzeBtn').disabled = true;
 
+  const loadingText = document.getElementById('loadingText');
+
+  let progress = 0;
+
+  const progressInterval = setInterval(() => {
+    if (progress < 90) {
+      progress += Math.random() * 10;
+
+      progress = Math.min(progress, 90);
+
+      document.getElementById('progressBar').style.width = progress + '%';
+
+      document.getElementById('progressText').textContent =
+        Math.floor(progress) + '%';
+
+      if (progress > 20) {
+        loadingText.textContent = '이미지 OCR 분석 중...';
+      }
+
+      if (progress > 45) {
+        loadingText.textContent = '프로세스 정보를 정리하는 중...';
+      }
+
+      if (progress > 70) {
+        loadingText.textContent = 'AI가 시스템 상태를 분석하는 중...';
+      }
+    }
+  }, 300);
+
   try {
-    updateProgress(20, '이미지를 준비하는 중...');
+    updateProgress(10, '이미지를 준비하는 중...');
+
     const base64Image = await fileToBase64(uploadedFile);
+
     const mimeType = uploadedFile.type || 'image/png';
 
-    updateProgress(50, 'Gemini 2.5 flash로 이미지 분석 중...');
+    updateProgress(30, 'Gemini 2.5 Flash로 이미지 분석 중...');
+
     const processes = await analyzeWithGeminiVision(base64Image, mimeType);
+
+    clearInterval(progressInterval);
+
+    document.getElementById('progressBar').style.width = '100%';
+
+    document.getElementById('progressText').textContent = '100%';
+
+    loadingText.textContent = '분석 완료!';
 
     updateProgress(100, '분석 완료!');
 
@@ -149,9 +190,15 @@ async function analyzeImage() {
     }
 
     analysisResults = processes;
-    displayResults(analysisResults);
+
+    setTimeout(() => {
+      displayResults(analysisResults);
+    }, 500);
   } catch (error) {
+    clearInterval(progressInterval);
+
     console.error('분석 에러:', error);
+
     showError('분석 중 오류가 발생했습니다.\n\n' + error.message);
   } finally {
     document.getElementById('analyzeBtn').disabled = false;

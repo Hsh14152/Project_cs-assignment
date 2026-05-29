@@ -608,6 +608,7 @@ body {
 
 .btn-summary:hover {
   opacity: 0.9;
+  transform: translateY(-2px);
 }
 
 .summary-section {
