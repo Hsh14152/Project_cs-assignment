@@ -427,16 +427,12 @@ ${JSON.stringify(analysisResults, null, 2)}
     const requestBody = {
       contents: [
         {
-          parts: [
-            {
-              text: prompt,
-            },
-          ],
+          parts: [{ text: prompt }],
         },
       ],
       generationConfig: {
         temperature: 0.4,
-        maxOutputTokens: 1500,
+        maxOutputTokens: 8192,
       },
     };
 
@@ -451,7 +447,6 @@ ${JSON.stringify(analysisResults, null, 2)}
     });
 
     const data = await response.json();
-    console.log(data);
 
     if (!response.ok) {
       throw new Error(data.error || '요약 생성 실패');
