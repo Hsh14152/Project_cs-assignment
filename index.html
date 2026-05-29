@@ -50,7 +50,7 @@
             <button class="btn-upload" id="uploadBtn">파일 선택</button>
           </div>
 
-          <div class="example-section">
+          <div class="example-section" id="exampleSection">
             <h3>🖥️ 캡처 예시</h3>
 
             <p class="example-text">
@@ -127,6 +127,20 @@
             <button class="btn-secondary" onclick="resetAnalysis()">
               🔄 새로 분석하기
             </button>
+
+            <button class="btn-summary" onclick="generateSummary()">
+              🤖 AI 요약
+            </button>
+          </div>
+
+          <div
+            id="summarySection"
+            class="summary-section"
+            style="display: none"
+          >
+            <h3>🤖 AI 시스템 분석</h3>
+
+            <div id="summaryContent"></div>
           </div>
         </div>
 
