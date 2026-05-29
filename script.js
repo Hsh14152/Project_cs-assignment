@@ -93,6 +93,7 @@ function handleFile(file) {
     document.getElementById('previewImage').src = e.target.result;
     document.getElementById('uploadArea').style.display = 'none';
     document.getElementById('previewSection').style.display = 'block';
+    document.getElementById('exampleSection').style.display = 'none';
   };
   reader.readAsDataURL(file);
 }
@@ -102,6 +103,7 @@ function removeImage() {
   document.getElementById('fileInput').value = '';
   document.getElementById('uploadArea').style.display = 'block';
   document.getElementById('previewSection').style.display = 'none';
+  document.getElementById('exampleSection').style.display = 'block';
 }
 
 function fileToBase64(file) {
@@ -391,4 +393,84 @@ function resetAnalysis() {
   document
     .getElementById('uploadSection')
     .scrollIntoView({ behavior: 'smooth' });
+  document.getElementById('summarySection').style.display = 'none';
+  document.getElementById('summaryContent').textContent = '';
+}
+
+async function generateSummary() {
+  if (!analysisResults || analysisResults.length === 0) {
+    alert('분석 결과가 없습니다.');
+    return;
+  }
+
+  const summaryButton = document.querySelector('.btn-summary');
+
+  summaryButton.disabled = true;
+  summaryButton.textContent = '⏳ AI 요약 생성 중...';
+
+  try {
+    const prompt = `
+다음은 Windows 작업관리자 프로세스 분석 결과입니다.
+
+${JSON.stringify(analysisResults, null, 2)}
+
+해야 할 작업:
+- 현재 PC 상태를 짧고 핵심적으로 요약
+- 메모리를 많이 사용하는 주요 원인 설명
+- 종료 추천 프로세스 언급
+- 실제로 체감 성능 향상이 있을지 설명
+- 너무 길게 쓰지 말 것
+- 한국어로 작성
+- 불필요한 인사말 금지
+`;
+
+    const requestBody = {
+      contents: [
+        {
+          parts: [
+            {
+              text: prompt,
+            },
+          ],
+        },
+      ],
+      generationConfig: {
+        temperature: 0.4,
+        maxOutputTokens: 500,
+      },
+    };
+
+    const response = await fetch('/api/analyze', {
+      method: 'POST',
+
+      headers: {
+        'Content-Type': 'application/json',
+      },
+
+      body: JSON.stringify(requestBody),
+    });
+
+    const data = await response.json();
+
+    if (!response.ok) {
+      throw new Error(data.error || '요약 생성 실패');
+    }
+
+    const summary = data.candidates?.[0]?.content?.parts?.[0]?.text;
+
+    if (!summary) {
+      throw new Error('AI 응답 없음');
+    }
+
+    document.getElementById('summaryContent').textContent = summary;
+
+    document.getElementById('summarySection').style.display = 'block';
+  } catch (error) {
+    console.error(error);
+
+    alert('AI 요약 생성 중 오류 발생');
+  } finally {
+    summaryButton.disabled = false;
+    summaryButton.textContent = '🤖 AI 요약';
+  }
 }
