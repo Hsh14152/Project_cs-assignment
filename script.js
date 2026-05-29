@@ -1,7 +1,6 @@
 let uploadedFile = null;
 let analysisResults = null;
 
-// 초기화
 document.addEventListener('DOMContentLoaded', () => {
   document
     .getElementById('fileInput')
@@ -105,12 +104,10 @@ function removeImage() {
   document.getElementById('previewSection').style.display = 'none';
 }
 
-// 파일을 base64로 변환
 function fileToBase64(file) {
   return new Promise((resolve, reject) => {
     const reader = new FileReader();
     reader.onload = () => {
-      // data:image/png;base64,xxxx 에서 base64 부분만 추출
       const base64 = reader.result.split(',')[1];
       resolve(base64);
     };
@@ -133,12 +130,10 @@ async function analyzeImage() {
   document.getElementById('analyzeBtn').disabled = true;
 
   try {
-    // 이미지를 base64로 변환
     updateProgress(20, '이미지를 준비하는 중...');
     const base64Image = await fileToBase64(uploadedFile);
     const mimeType = uploadedFile.type || 'image/png';
 
-    // Gemini로 직접 분석
     updateProgress(50, 'Gemini 2.5 flash로 이미지 분석 중...');
     const processes = await analyzeWithGeminiVision(base64Image, mimeType);
 
@@ -245,15 +240,12 @@ memory는 MB 단위 숫자만. 읽기 어려우면 0.`;
   return safeParseJSON(textResponse);
 }
 
-// 안전한 JSON 파싱 - 여러 방식으로 시도
 function safeParseJSON(text) {
   let jsonText = text.trim();
 
-  // 1. 마크다운 코드블록 제거
   jsonText = jsonText.replace(/```json\s*/gi, '').replace(/```\s*/g, '');
   jsonText = jsonText.trim();
 
-  // 2. JSON 배열 부분만 정규식으로 추출
   const arrayMatch = jsonText.match(/\[[\s\S]*\]/);
   if (arrayMatch) {
     jsonText = arrayMatch[0];
@@ -261,11 +253,9 @@ function safeParseJSON(text) {
 
   try {
     const parsed = JSON.parse(jsonText);
-    // 배열인지 확인
     if (Array.isArray(parsed)) {
       return parsed;
     }
-    // 객체 안에 배열이 있는 경우
     const values = Object.values(parsed);
     const arr = values.find((v) => Array.isArray(v));
     if (arr) return arr;
